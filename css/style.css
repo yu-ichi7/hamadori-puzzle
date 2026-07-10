@@ -1,0 +1,172 @@
+/* はまどりパズル: 干潟テーマ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  background: #FBF9F5;
+  font-family: "Hiragino Maru Gothic ProN", "BIZ UDGothic", "Yu Gothic UI", "Meiryo", sans-serif;
+  color: #3A3A38;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.wrap {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 10px 12px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ヘッダー */
+header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+h1 {
+  font-size: 20px;
+  letter-spacing: 2px;
+}
+h1 .sub { font-size: 11px; color: #8B8578; letter-spacing: 0; }
+
+.hud {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hud .box {
+  background: #fff;
+  border: 2px solid #E4DCC8;
+  border-radius: 10px;
+  padding: 3px 10px;
+  text-align: center;
+  min-width: 64px;
+}
+.hud .label { font-size: 10px; color: #8B8578; }
+.hud .value { font-size: 17px; font-weight: bold; }
+
+.hud .next-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#next { display: block; }
+
+.btns { display: flex; gap: 6px; }
+button {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 6px 12px;
+  border: 2px solid #A9C99A;
+  border-radius: 10px;
+  background: #fff;
+  color: #3A3A38;
+  cursor: pointer;
+}
+button:hover { background: #F0F6EC; }
+#muteBtn { min-width: 42px; }
+
+/* 盤面 */
+#game {
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 420 / 640;
+  display: block;
+  border: 3px solid #C7B99A;
+  border-radius: 14px;
+  touch-action: none;
+  background: #EFEBDC;
+}
+
+.hint { font-size: 11px; color: #8B8578; }
+
+/* トースト */
+#toast {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-70px);
+  background: #4F6B4A;
+  color: #FBF9F5;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  transition: transform 0.3s ease;
+  z-index: 60;
+  white-space: nowrap;
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+
+/* モーダル共通 */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(58, 58, 56, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 16px;
+}
+.modal.open { display: flex; }
+.modal .panel {
+  background: #FBF9F5;
+  border-radius: 16px;
+  padding: 18px;
+  max-width: 520px;
+  width: 100%;
+  max-height: 86vh;
+  overflow-y: auto;
+}
+.panel h2 { font-size: 18px; margin-bottom: 4px; }
+.panel .count { font-size: 13px; color: #4F6B4A; margin-bottom: 12px; }
+
+/* 図鑑グリッド */
+.zukan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+.zukan-cell {
+  background: #fff;
+  border: 2px solid #E4DCC8;
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+}
+.zukan-cell.locked { opacity: 0.75; }
+.zukan-cell canvas { width: 72px; height: 72px; }
+.zukan-name { font-size: 13px; font-weight: bold; margin-top: 4px; }
+.zukan-len { font-size: 11px; color: #8B8578; }
+.zukan-trivia {
+  font-size: 11px;
+  text-align: left;
+  margin-top: 6px;
+  line-height: 1.5;
+  color: #5A564C;
+}
+
+.panel .close-row { text-align: center; margin-top: 14px; }
+
+/* ゲームオーバー */
+#overModal .panel { text-align: center; max-width: 340px; }
+#overModal h2 { font-size: 22px; margin-bottom: 8px; }
+#finalScore { font-size: 40px; font-weight: bold; color: #C97A4A; }
+#newBest {
+  display: none;
+  color: #4F6B4A;
+  font-weight: bold;
+  margin: 6px 0;
+}
+#retryBtn {
+  margin-top: 12px;
+  font-size: 16px;
+  padding: 10px 26px;
+  background: #A9C99A;
+  border-color: #4F6B4A;
+}

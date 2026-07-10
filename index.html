@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>はまどりパズル - 浜辺の鳥の合体ゲーム</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>はまどりパズル<span class="sub">〜浜辺の鳥をくっつけて、大きく育てよう〜</span></h1>
+    </header>
+
+    <div class="hud" style="width:100%; justify-content: space-between;">
+      <div style="display:flex; gap:8px;">
+        <div class="box">
+          <div class="label">スコア</div>
+          <div class="value" id="score">0</div>
+        </div>
+        <div class="box">
+          <div class="label">ベスト</div>
+          <div class="value" id="best">0</div>
+        </div>
+      </div>
+      <div class="box next-box">
+        <div class="label">つぎ</div>
+        <canvas id="next" width="48" height="48"></canvas>
+      </div>
+      <div class="btns">
+        <button id="zukanBtn">📖 図鑑</button>
+        <button id="muteBtn">🔊</button>
+      </div>
+    </div>
+
+    <canvas id="game"></canvas>
+    <div class="hint">指やマウスで左右にねらいをつけて、離すと落ちるよ。同じ鳥がくっつくと大きな鳥に！</div>
+  </div>
+
+  <!-- トースト（新種解放） -->
+  <div id="toast"></div>
+
+  <!-- 図鑑モーダル -->
+  <div class="modal" id="zukanModal">
+    <div class="panel">
+      <h2>📖 浜辺のとり図鑑</h2>
+      <div class="count">であった鳥: <span id="zukanCount">0 / 11</span></div>
+      <div class="zukan-grid" id="zukanGrid"></div>
+      <div class="close-row"><button id="zukanClose">とじる</button></div>
+    </div>
+  </div>
+
+  <!-- ゲームオーバーモーダル -->
+  <div class="modal" id="overModal">
+    <div class="panel">
+      <h2>ゲームオーバー</h2>
+      <div>スコア</div>
+      <div id="finalScore">0</div>
+      <div id="newBest">🏆 ハイスコア更新！</div>
+      <button id="retryBtn">もういちど</button>
+    </div>
+  </div>
+
+  <!-- file:// でも動くよう、type="module" は使わず順番に読み込む -->
+  <script src="./vendor/matter.min.js"></script>
+  <script src="./js/birds-data.js"></script>
+  <script src="./js/draw-bird.js"></script>
+  <script src="./js/audio.js"></script>
+  <script src="./js/physics.js"></script>
+  <script src="./js/merge.js"></script>
+  <script src="./js/input.js"></script>
+  <script src="./js/zukan.js"></script>
+  <script src="./js/game.js"></script>
+</body>
+</html>
