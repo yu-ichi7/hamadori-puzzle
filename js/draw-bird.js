@@ -1,48 +1,49 @@
 // 鳥の描画: AI生成イラスト（透過PNG）を読み込んで描く。ゲーム盤面と図鑑モーダルで共用
 (function () {
-  const cache = {}; // key: "puzzleKey|tier" -> { loaded, img, color }
+  // 物理円に対する絵の描画倍率。画像はトリム済みでフレームいっぱいだが、
+  // 絵の輪郭は完全な円ではないため、少し大きめに描いて隙間を目立たなくする
+  const IMG_SCALE = 1.06;
 
-  function getEntry(puzzleKey, tier) {
-    const key = puzzleKey + "|" + tier;
+  const cache = {}; // key: "puzzleKey|slug" -> { loaded, img, color }
+
+  function getEntry(puzzleKey, bird, tier) {
+    const key = puzzleKey + "|" + bird.slug;
     let e = cache[key];
     if (e) return e;
-    const puzzle = TORI.PUZZLES[puzzleKey];
-    const bird = puzzle && puzzle.birds[tier - 1];
-    e = { loaded: false, img: null, color: (bird && bird.color) || "#B9B4A8" };
-    if (bird) {
-      const num = String(tier).padStart(2, "0");
-      const slug = TORI_SLUGS[puzzleKey][tier - 1];
-      const im = new Image();
-      im.onload = function () { e.loaded = true; };
-      im.onerror = function () { console.warn("鳥画像の読み込み失敗:", key); };
-      im.src = "./assets/birds/" + puzzleKey + "/" + num + "-" + slug + ".png";
-      e.img = im;
+    e = { loaded: false, img: null, color: bird.color || "#B9B4A8" };
+    // 画像ファイルの番号は「定義順（birds配列の位置）」。pool抽選で tier とズレることが
+    // あるため、slug から定義位置を逆引きする（見つからなければ tier をそのまま使う）
+    const defs = TORI.PUZZLES[puzzleKey].birds;
+    let defIndex = -1;
+    for (let i = 0; i < defs.length; i++) {
+      if (defs[i].slug === bird.slug) { defIndex = i; break; }
     }
+    const num = String(defIndex >= 0 ? defIndex + 1 : tier).padStart(2, "0");
+    const im = new Image();
+    im.onload = function () { e.loaded = true; };
+    im.onerror = function () { console.warn("鳥画像の読み込み失敗:", key); };
+    im.src = "./assets/birds/" + puzzleKey + "/" + num + "-" + bird.slug + ".png";
+    e.img = im;
     cache[key] = e;
     return e;
   }
 
-  // ファイル名のスラッグ（ローマ字）。パズル追加時はここにも追記する
-  const TORI_SLUGS = {
-    shigichidori: ["tounen", "shirochidori", "medaichidori", "miyubishigi", "hamashigi",
-      "kyoujoshigi", "obashigi", "daizen", "ooban", "oosorihashishigi", "miyakodori"],
-    mori: ["kikuitadaki", "mejiro", "enaga", "yamagara", "shijuukara",
-      "kogera", "shime", "mozu", "aogera", "kakesu", "fukurou"],
-    mizube: ["kaitsuburi", "kogamo", "kinkurohajiro", "hoshihajiro", "hidorigamo",
-      "oshidori", "magamo", "karugamo", "goisagi", "kosagi", "aosagi"],
-    takaba: ["tsumi", "haitaka", "chougenbou", "hayabusa", "sashiba",
-      "ootaka", "nosuri", "tobi", "kumataka", "inuwashi", "ojirowashi"],
-  };
-
-  // メイン: puzzleKey（省略時は現在選択中）の tier の鳥を (x,y) に半径 r・回転 angle で描く
+  // メイン: tier の鳥を (x,y) に半径 r・回転 angle で描く
+  // puzzleKey を明示した呼び出し（図鑑）は定義順の birds を、
+  // 省略した呼び出し（盤面・つぎプレビュー）は抽選済みの TORI.BIRDS を参照する
   function drawBird(ctx, tier, x, y, r, angle, puzzleKey) {
     const pk = puzzleKey || TORI.state.puzzleKey;
-    const e = getEntry(pk, tier);
+    const bird = puzzleKey
+      ? TORI.PUZZLES[pk].birds[tier - 1]
+      : TORI.BIRDS[tier - 1];
+    if (!bird) return;
+    const e = getEntry(pk, bird, tier);
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(angle || 0);
     if (e.loaded) {
-      ctx.drawImage(e.img, -r, -r, r * 2, r * 2);
+      const s = r * IMG_SCALE;
+      ctx.drawImage(e.img, -s, -s, s * 2, s * 2);
     } else {
       // 読み込み待ち・失敗時のプレースホルダー
       ctx.beginPath();

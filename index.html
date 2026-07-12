@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>はまどりパズル - 浜辺の鳥の合体ゲーム</title>
+  <title>鳥あつめパズル - 野鳥の合体パズルゲーム</title>
   <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
   <div class="wrap">
     <header>
-      <h1>はまどりパズル</h1>
+      <h1>鳥あつめパズル</h1>
       <div class="btns">
         <button id="puzzleSwitchBtn">🧩 かえる</button>
       </div>
     </header>
-    <div class="puzzle-label" id="puzzleLabel">🐦 シギチドリパズル ・ Lv3</div>
+    <div class="puzzle-label" id="puzzleLabel">干潟の鳥パズル</div>
 
     <div class="hud" style="width:100%; justify-content: space-between;">
       <div style="display:flex; gap:8px;">
@@ -30,9 +30,11 @@
       <div class="box next-box">
         <div class="label">つぎ</div>
         <canvas id="next" width="48" height="48"></canvas>
+        <div class="next-name" id="nextName"></div>
       </div>
-      <div class="btns">
-        <button id="zukanBtn">📖 図鑑</button>
+      <div class="btns hud-btns">
+        <button id="shakeBtn">🌀 ゆらす <span id="shakeCount">×0</span></button>
+        <button id="zukanBtn">鳥図鑑</button>
         <button id="muteBtn">🔊</button>
       </div>
     </div>
@@ -46,27 +48,23 @@
   <!-- トースト（新種解放） -->
   <div id="toast"></div>
 
-  <!-- 図鑑モーダル -->
+  <!-- 鳥図鑑モーダル（カテゴリ選択式） -->
   <div class="modal" id="zukanModal">
-    <div class="panel">
-      <h2>📖 とり図鑑</h2>
+    <div class="panel zukan-panel">
+      <div class="panel-head">
+        <h2>鳥図鑑</h2>
+        <button id="zukanClose" class="x-close">✕ とじる</button>
+      </div>
       <div class="count">であった鳥: <span id="zukanCount">0 / 44</span></div>
       <div id="zukanGrid"></div>
-      <div class="close-row"><button id="zukanClose">とじる</button></div>
     </div>
   </div>
 
-  <!-- パズル・難易度選択モーダル -->
+  <!-- パズル選択モーダル -->
   <div class="modal" id="selectModal">
     <div class="panel">
-      <h2>① あそぶパズルをえらぶ</h2>
+      <h2>あそぶパズルをえらぶ</h2>
       <div class="puzzle-cards" id="selectPuzzles"></div>
-      <h2 style="margin-top:18px;">② なんいどをえらぶ</h2>
-      <div class="level-cards" id="selectLevels">
-        <button class="level-btn" data-level="1">レベル1<span>9だんまで</span></button>
-        <button class="level-btn" data-level="2">レベル2<span>10だんまで</span></button>
-        <button class="level-btn" data-level="3">レベル3<span>11だんまで</span></button>
-      </div>
       <div class="close-row"><button id="startBtn" disabled>はじめる</button></div>
     </div>
   </div>
@@ -90,6 +88,7 @@
   <script src="./js/physics.js"></script>
   <script src="./js/merge.js"></script>
   <script src="./js/input.js"></script>
+  <script src="./js/items.js"></script>
   <script src="./js/zukan.js"></script>
   <script src="./js/game.js"></script>
   <script src="./js/puzzle-select.js"></script>

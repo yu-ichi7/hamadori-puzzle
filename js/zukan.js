@@ -1,8 +1,8 @@
-// ゲーム内図鑑: 解放（アンロック）・モーダル表示・localStorage 永続化
+// 鳥図鑑: 解放（アンロック）・カテゴリ選択式モーダル・localStorage 永続化
 // 4パズル共通の1つのコレクション（最大44種）として管理する
 (function () {
   const KEY_UNLOCKED = "torisuika_unlocked";
-  const KEY_HISCORE_PREFIX = "torisuika_highscore_lv"; // + level(1/2/3)
+  const KEY_HISCORE = "torisuika_highscore_lv3"; // 難易度廃止後もベストを引き継ぐため旧lv3キーを継続利用
   const KEY_HISCORE_LEGACY = "torisuika_highscore"; // 旧・単一パズル時代のキー
 
   // localStorage が使えない環境（file:// の一部設定等）でも動くフォールバック
@@ -64,23 +64,22 @@
     }, 0);
   }
 
-  // ---- ハイスコア（難易度レベル単位） ----
+  // ---- ハイスコア（難易度廃止＝単一キー） ----
   function migrateLegacyHighscore() {
     const legacy = store.get(KEY_HISCORE_LEGACY);
     if (legacy == null) return;
-    const lv3Key = KEY_HISCORE_PREFIX + "3";
-    if (store.get(lv3Key) == null) store.set(lv3Key, legacy);
+    if (store.get(KEY_HISCORE) == null) store.set(KEY_HISCORE, legacy);
     store.remove(KEY_HISCORE_LEGACY);
   }
   migrateLegacyHighscore();
 
-  function getHighscore(level) {
-    const v = parseInt(store.get(KEY_HISCORE_PREFIX + level) || "0", 10);
+  function getHighscore() {
+    const v = parseInt(store.get(KEY_HISCORE) || "0", 10);
     return isNaN(v) ? 0 : v;
   }
-  function saveHighscore(score, level) {
-    if (score > getHighscore(level)) {
-      store.set(KEY_HISCORE_PREFIX + level, String(score));
+  function saveHighscore(score) {
+    if (score > getHighscore()) {
+      store.set(KEY_HISCORE, String(score));
       return true;
     }
     return false;
@@ -90,7 +89,10 @@
   let toastTimer = null;
   function showToast(puzzleKey, tier) {
     const el = document.getElementById("toast");
-    const def = TORI.PUZZLES[puzzleKey] && TORI.PUZZLES[puzzleKey].birds[tier - 1];
+    // 現在プレイ中のパズルなら抽選済み TORI.BIRDS、そうでなければ定義順
+    const def = (puzzleKey === TORI.state.puzzleKey && TORI.BIRDS[tier - 1])
+      ? TORI.BIRDS[tier - 1]
+      : (TORI.PUZZLES[puzzleKey] && TORI.PUZZLES[puzzleKey].birds[tier - 1]);
     if (!el || !def) return;
     el.textContent = "🎉 新しい鳥に出会った！ 「" + def.name + "」";
     el.classList.add("show");
@@ -98,64 +100,21 @@
     toastTimer = setTimeout(function () { el.classList.remove("show"); }, 2400);
   }
 
-  // ---- 図鑑モーダル（4パズルをセクション分けして表示） ----
+  // ---- 鳥図鑑モーダル（カテゴリ選択式の2ビュー構成） ----
+  // ビュー1: カテゴリ一覧（4パズル）→ ビュー2: 選んだカテゴリの11種
+  let currentCategory = null; // null = カテゴリ一覧
+
   function renderZukan() {
     const grid = document.getElementById("zukanGrid");
     const countEl = document.getElementById("zukanCount");
     if (!grid) return;
     grid.innerHTML = "";
 
-    TORI.PUZZLE_ORDER.forEach(function (puzzleKey) {
-      const puzzle = TORI.PUZZLES[puzzleKey];
-      const section = document.createElement("div");
-      section.className = "zukan-section";
-
-      const title = document.createElement("div");
-      title.className = "zukan-section-title";
-      title.textContent = puzzle.icon + " " + puzzle.name + "（" + unlockedCountFor(puzzleKey) + " / " + puzzle.birds.length + "）";
-      section.appendChild(title);
-
-      const sectionGrid = document.createElement("div");
-      sectionGrid.className = "zukan-grid";
-
-      puzzle.birds.forEach(function (b, i) {
-        const tier = i + 1;
-        const unlockedFlag = isUnlocked(puzzleKey, tier);
-        const cell = document.createElement("div");
-        cell.className = "zukan-cell" + (unlockedFlag ? "" : " locked");
-
-        const cv = document.createElement("canvas");
-        const size = 96;
-        cv.width = size; cv.height = size;
-        const ctx = cv.getContext("2d");
-        if (unlockedFlag) {
-          TORI.drawBird(ctx, tier, size / 2, size / 2, size * 0.4, 0, puzzleKey);
-        } else {
-          TORI.drawSilhouette(ctx, tier, size / 2, size / 2, size * 0.4);
-        }
-        cell.appendChild(cv);
-
-        const name = document.createElement("div");
-        name.className = "zukan-name";
-        name.textContent = unlockedFlag ? (tier + ". " + b.name) : (tier + ". ？？？");
-        cell.appendChild(name);
-
-        const len = document.createElement("div");
-        len.className = "zukan-len";
-        len.textContent = unlockedFlag ? ("全長 " + b.len) : "---";
-        cell.appendChild(len);
-
-        const trivia = document.createElement("div");
-        trivia.className = "zukan-trivia";
-        trivia.textContent = unlockedFlag ? b.trivia : "合体で出会うと解放されます";
-        cell.appendChild(trivia);
-
-        sectionGrid.appendChild(cell);
-      });
-
-      section.appendChild(sectionGrid);
-      grid.appendChild(section);
-    });
+    if (currentCategory == null) {
+      renderCategoryList(grid);
+    } else {
+      renderCategoryDetail(grid, currentCategory);
+    }
 
     if (countEl) {
       const n = unlockedCount();
@@ -164,7 +123,92 @@
     }
   }
 
+  // ビュー1: カテゴリ一覧
+  function renderCategoryList(grid) {
+    const list = document.createElement("div");
+    list.className = "zukan-category-list";
+    TORI.PUZZLE_ORDER.forEach(function (puzzleKey) {
+      const puzzle = TORI.PUZZLES[puzzleKey];
+      const btn = document.createElement("button");
+      btn.className = "zukan-category-btn";
+      const name = document.createElement("span");
+      name.className = "zukan-category-name";
+      name.textContent = puzzle.name;
+      const prog = document.createElement("span");
+      prog.className = "zukan-category-progress";
+      prog.textContent = unlockedCountFor(puzzleKey) + " / " + puzzle.birds.length;
+      btn.appendChild(name);
+      btn.appendChild(prog);
+      btn.addEventListener("click", function () {
+        currentCategory = puzzleKey;
+        renderZukan();
+      });
+      list.appendChild(btn);
+    });
+    grid.appendChild(list);
+  }
+
+  // ビュー2: カテゴリ詳細（11種グリッド）
+  function renderCategoryDetail(grid, puzzleKey) {
+    const puzzle = TORI.PUZZLES[puzzleKey];
+
+    const back = document.createElement("button");
+    back.className = "zukan-back-btn";
+    back.textContent = "← カテゴリにもどる";
+    back.addEventListener("click", function () {
+      currentCategory = null;
+      renderZukan();
+    });
+    grid.appendChild(back);
+
+    const title = document.createElement("div");
+    title.className = "zukan-section-title";
+    title.textContent = puzzle.name + "（" + unlockedCountFor(puzzleKey) + " / " + puzzle.birds.length + "）";
+    grid.appendChild(title);
+
+    const sectionGrid = document.createElement("div");
+    sectionGrid.className = "zukan-grid";
+
+    puzzle.birds.forEach(function (b, i) {
+      const tier = i + 1;
+      const unlockedFlag = isUnlocked(puzzleKey, tier);
+      const cell = document.createElement("div");
+      cell.className = "zukan-cell" + (unlockedFlag ? "" : " locked");
+
+      const cv = document.createElement("canvas");
+      const size = 96;
+      cv.width = size; cv.height = size;
+      const ctx = cv.getContext("2d");
+      if (unlockedFlag) {
+        TORI.drawBird(ctx, tier, size / 2, size / 2, size * 0.4, 0, puzzleKey);
+      } else {
+        TORI.drawSilhouette(ctx, tier, size / 2, size / 2, size * 0.4);
+      }
+      cell.appendChild(cv);
+
+      const name = document.createElement("div");
+      name.className = "zukan-name";
+      name.textContent = unlockedFlag ? (tier + ". " + b.name) : (tier + ". ？？？");
+      cell.appendChild(name);
+
+      const len = document.createElement("div");
+      len.className = "zukan-len";
+      len.textContent = unlockedFlag ? ("全長 " + b.len) : "---";
+      cell.appendChild(len);
+
+      const trivia = document.createElement("div");
+      trivia.className = "zukan-trivia";
+      trivia.textContent = unlockedFlag ? b.trivia : "合体で出会うと解放されます";
+      cell.appendChild(trivia);
+
+      sectionGrid.appendChild(cell);
+    });
+
+    grid.appendChild(sectionGrid);
+  }
+
   function openZukan() {
+    currentCategory = null; // 開くたびにカテゴリ一覧から
     renderZukan();
     document.getElementById("zukanModal").classList.add("open");
   }

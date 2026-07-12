@@ -1,6 +1,6 @@
 // メイン: 状態機械・スコア・ゲームオーバー・描画ループ
 (function () {
-  const { Engine, Composite } = Matter;
+  const { Engine, Composite, Body } = Matter;
   const B = TORI.BOARD;
   const P = TORI.PHYS;
 
@@ -19,7 +19,7 @@
 
   // ---- 状態 ----
   let score = 0;
-  let best = TORI.zukan.getHighscore(TORI.state.level);
+  let best = TORI.zukan.getHighscore();
   let aimX = B.W / 2;
   let currentTier = pickTier();
   let nextTier = pickTier();
@@ -28,6 +28,7 @@
   let isOver = false;
   let lastT = performance.now();
   let particles = [];
+  let shakeT = 0;        // 画面シェイク演出の残り時間(ms)
 
   function pickTier() {
     const w = TORI.DROP_WEIGHTS;
@@ -56,9 +57,7 @@
   }
   function updatePuzzleLabel() {
     const puzzle = TORI.PUZZLES[TORI.state.puzzleKey];
-    if (puzzleLabelEl) {
-      puzzleLabelEl.textContent = puzzle.icon + " " + puzzle.name + " ・ Lv" + TORI.state.level;
-    }
+    if (puzzleLabelEl) puzzleLabelEl.textContent = puzzle.name;
   }
 
   // ---- 落下 ----
@@ -79,12 +78,17 @@
     setTimeout(function () { canDrop = true; }, P.dropCooldownMs);
   }
 
-  // 「つぎ」プレビュー（DOM上の小canvas）
+  // 「つぎ」プレビュー（絵＋名前。まだ図鑑に無い鳥の名前は？？？）
   function renderNext() {
     const cv = document.getElementById("next");
     const c2 = cv.getContext("2d");
     c2.clearRect(0, 0, cv.width, cv.height);
     TORI.drawBird(c2, nextTier, cv.width / 2, cv.height / 2, 20, 0);
+    const nameEl = document.getElementById("nextName");
+    if (nameEl) {
+      const known = TORI.zukan.isUnlocked(TORI.state.puzzleKey, nextTier);
+      nameEl.textContent = known ? TORI.BIRDS[nextTier - 1].name : "？？？";
+    }
   }
 
   // ---- 合体コールバック ----
@@ -96,6 +100,7 @@
     TORI.zukan.unlock(TORI.state.puzzleKey, newTier);
     TORI.audio.merge(newTier);
     spawnParticles(x, y, def.radius);
+    renderNext(); // 解放で「？？？」が名前に変わることがある
   }
 
   // ---- パーティクル（羽が舞う演出）----
@@ -122,6 +127,30 @@
     }
   }
 
+  // ---- ゆらすアイテム ----
+  const shakeBtn = document.getElementById("shakeBtn");
+  const shakeCountEl = document.getElementById("shakeCount");
+  function updateShakeUI() {
+    const n = TORI.items.shakeStock();
+    if (shakeCountEl) shakeCountEl.textContent = "×" + n;
+    if (shakeBtn) shakeBtn.disabled = (n <= 0);
+  }
+  function doShake() {
+    if (isOver) return;
+    if (!TORI.items.useShake()) return; // 在庫なし
+    // 全部の鳥に上向き＋ランダム横の速度を与えて盤面をほぐす
+    Composite.allBodies(engine.world).forEach(function (b) {
+      if (b.label !== "bird") return;
+      Body.setVelocity(b, {
+        x: (Math.random() - 0.5) * 8,
+        y: -(3 + Math.random() * 4),
+      });
+    });
+    shakeT = 400; // 画面シェイク演出
+    TORI.audio.shake();
+    updateShakeUI();
+  }
+
   // ---- ゲームオーバー判定 ----
   function checkGameOver(dt) {
     if (isOver) return;
@@ -144,22 +173,25 @@
   function gameOver() {
     isOver = true;
     TORI.audio.gameover();
-    const isNewBest = TORI.zukan.saveHighscore(score, TORI.state.level);
+    const isNewBest = TORI.zukan.saveHighscore(score);
+    TORI.items.onPlayFinished(); // 5プレーごとのボーナス在庫カウント
+    updateShakeUI();
     document.getElementById("finalScore").textContent = score;
     document.getElementById("newBest").style.display = isNewBest ? "block" : "none";
     document.getElementById("overModal").classList.add("open");
   }
 
   function restart() {
-    TORI.zukan.saveHighscore(score, TORI.state.level); // 途中リタイアでもベストは残す
+    TORI.zukan.saveHighscore(score); // 途中リタイアでもベストは残す
     // 鳥だけ消す（壁は残す）
     Composite.allBodies(engine.world).forEach(function (b) {
       if (b.label === "bird") Composite.remove(engine.world, b);
     });
     TORI.merge.clearQueue();
+    TORI.setPuzzle(TORI.state.puzzleKey); // pool定義があれば顔ぶれを再抽選
     particles = [];
     score = 0;
-    best = TORI.zukan.getHighscore(TORI.state.level);
+    best = TORI.zukan.getHighscore();
     overTimer = 0;
     isOver = false;
     canDrop = true;
@@ -168,19 +200,25 @@
     renderNext();
     updateUI();
     updatePuzzleLabel();
+    updateShakeUI();
     document.getElementById("overModal").classList.remove("open");
   }
 
-  // パズル・難易度を切り替えて最初から始める
-  function switchPuzzle(puzzleKey, level) {
-    TORI.state.level = level;
-    TORI.state.maxTier = TORI.LEVEL_MAX_TIER[level];
+  // パズルを切り替えて最初から始める
+  function switchPuzzle(puzzleKey) {
     TORI.setPuzzle(puzzleKey);
     restart();
   }
 
   // ---- 描画 ----
   function draw() {
+    ctx.save();
+    if (shakeT > 0) {
+      // 画面シェイク演出
+      const mag = Math.min(6, shakeT / 60);
+      ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
+    }
+
     // 背景（現在のパズルのテーマカラー。上=空、下=地面）
     const bg = TORI.PUZZLES[TORI.state.puzzleKey].bg;
     const sky = ctx.createLinearGradient(0, 0, 0, B.H);
@@ -188,7 +226,7 @@
     sky.addColorStop(0.55, bg.sky2);
     sky.addColorStop(1, bg.sky3);
     ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, B.W, B.H);
+    ctx.fillRect(-8, -8, B.W + 16, B.H + 16);
 
     // ゲームオーバーライン（危険が近いと赤く）
     const danger = overTimer > 0;
@@ -239,6 +277,7 @@
       ctx.fill();
     });
     ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   // ---- メインループ ----
@@ -250,6 +289,7 @@
       TORI.merge.processMerges(engine, onMerge);
       checkGameOver(dt);
     }
+    if (shakeT > 0) shakeT -= dt;
     updateParticles(dt);
     draw();
     requestAnimationFrame(loop);
@@ -271,11 +311,13 @@
     const m = TORI.audio.toggleMute();
     this.textContent = m ? "🔇" : "🔊";
   });
+  if (shakeBtn) shakeBtn.addEventListener("click", doShake);
 
   // ---- 開始 ----
   renderNext();
   updateUI();
   updatePuzzleLabel();
+  updateShakeUI();
   requestAnimationFrame(loop);
 
   TORI.game = { restart: restart, switchPuzzle: switchPuzzle };
@@ -284,6 +326,7 @@
   TORI._debug = {
     engine: engine,
     drop: drop,
+    doShake: doShake,
     setTier: function (t) { currentTier = t; },
     step: function (n) { // rAFが止まる環境での手動フレーム送り
       for (var i = 0; i < (n || 1); i++) {

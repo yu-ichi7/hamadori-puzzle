@@ -47,6 +47,11 @@
     gameover: function () {                   // 残念…（下降音）
       tone(440, 110, 0.6, "sawtooth", 0.12);
     },
+    shake: function () {                      // ゆらす（ゴゴゴッという低音）
+      tone(90, 60, 0.15, "sawtooth", 0.2);
+      tone(70, 50, 0.18, "square", 0.12, 0.1);
+      tone(110, 70, 0.15, "sawtooth", 0.16, 0.22);
+    },
     toggleMute: function () {
       muted = !muted;
       return muted;
