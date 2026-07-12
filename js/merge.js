@@ -9,7 +9,7 @@
 
   function initMerge(engine) {
     Events.on(engine, "collisionStart", function (e) {
-      const maxTier = TORI.BIRDS.length;
+      const maxTier = TORI.state.maxTier;
       for (let i = 0; i < e.pairs.length; i++) {
         const a = e.pairs[i].bodyA;
         const b = e.pairs[i].bodyB;

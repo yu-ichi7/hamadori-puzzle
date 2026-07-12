@@ -1,0 +1,4 @@
+# イラスト生成の中間ファイル・比較用ページ（本番では assets/ の確定版のみ使う）
+tools/*.png
+tools/*.html
+tools/*.jpg
