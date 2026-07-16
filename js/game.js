@@ -105,9 +105,9 @@
 
   // ---- パーティクル（羽が舞う演出）----
   function spawnParticles(x, y, r) {
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 14; i++) {
       const ang = Math.random() * Math.PI * 2;
-      const sp = 1.5 + Math.random() * 2.5;
+      const sp = 2.2 + Math.random() * 3.8;
       particles.push({
         x: x, y: y,
         vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 1,
@@ -142,11 +142,11 @@
     Composite.allBodies(engine.world).forEach(function (b) {
       if (b.label !== "bird") return;
       Body.setVelocity(b, {
-        x: (Math.random() - 0.5) * 8,
-        y: -(3 + Math.random() * 4),
+        x: (Math.random() - 0.5) * 14,
+        y: -(5 + Math.random() * 5),
       });
     });
-    shakeT = 400; // 画面シェイク演出
+    shakeT = 600; // 画面シェイク演出
     TORI.audio.shake();
     updateShakeUI();
   }
@@ -215,7 +215,7 @@
     ctx.save();
     if (shakeT > 0) {
       // 画面シェイク演出
-      const mag = Math.min(6, shakeT / 60);
+      const mag = Math.min(12, shakeT / 40);
       ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
     }
 
@@ -261,9 +261,21 @@
       const def = TORI.BIRDS[b.plugin.tier - 1];
       let r = def.radius;
       const age = now - (b.plugin.bornAt || 0);
-      if (age < 180) {
-        const t = age / 180;
-        r = r * (0.6 + 0.4 * (1 - Math.pow(1 - t, 3))); // easeOutCubic
+      const POP_DUR = 280;
+      if (age < POP_DUR) {
+        const t = age / POP_DUR;
+        let scale;
+        if (t < 0.55) {
+          // 0.6倍 → 1.35倍まで一気に膨らむ（ポンッ）
+          const tt = t / 0.55;
+          scale = 0.6 + 0.75 * (1 - Math.pow(1 - tt, 3));
+        } else {
+          // 1.35倍 → 1.0倍に弾み戻る
+          const tt = (t - 0.55) / 0.45;
+          const eased = tt < 0.5 ? 2 * tt * tt : 1 - Math.pow(-2 * tt + 2, 2) / 2;
+          scale = 1.35 - 0.35 * eased;
+        }
+        r = r * scale;
       }
       TORI.drawBird(ctx, b.plugin.tier, b.position.x, b.position.y, r, b.angle);
     });
