@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>鳥あつめパズル - 野鳥の合体パズルゲーム</title>
   <link rel="stylesheet" href="./css/style.css">
+  <!-- ホーム画面に追加してアプリのように使う（オフライン対応） -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#EFEBDC">
+  <link rel="apple-touch-icon" href="./assets/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="鳥あつめ">
 </head>
 <body>
   <div class="wrap">
@@ -92,5 +99,16 @@
   <script src="./js/zukan.js"></script>
   <script src="./js/game.js"></script>
   <script src="./js/puzzle-select.js"></script>
+
+  <!-- オフライン再生の準備（http(s) で開いたときだけ動く。file:// では何もしない） -->
+  <script>
+    if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("./sw.js").catch(function (err) {
+          console.warn("オフライン準備に失敗:", err);
+        });
+      });
+    }
+  </script>
 </body>
 </html>

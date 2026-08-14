@@ -1,0 +1,32 @@
+{
+  "name": "鳥あつめパズル",
+  "short_name": "鳥あつめ",
+  "description": "日本の野鳥44種を集める合体パズル。干潟・森・水辺・猛禽類の4つのパズルで遊べます。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF9F5",
+  "theme_color": "#EFEBDC",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "./assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
