@@ -1,6 +1,6 @@
 // サービスワーカー: ゲーム一式を端末に保存して、電波が無くても遊べるようにする
 // ゲームを更新したら CACHE_NAME の日付を変える（古いキャッシュは自動で捨てられる）
-const CACHE_NAME = "toriatsume-v20260712a";
+const CACHE_NAME = "toriatsume-v20260712b";
 
 // 鳥の画像URLには ?v=... が付いて呼ばれるため、
 // キャッシュ照合時はクエリを無視する（ignoreSearch）ことで確実にヒットさせる
@@ -13,6 +13,7 @@ const ASSETS = [
   "./js/birds-data.js",
   "./js/draw-bird.js",
   "./js/audio.js",
+  "./js/bgm.js",
   "./js/physics.js",
   "./js/merge.js",
   "./js/input.js",
@@ -88,25 +89,44 @@ self.addEventListener("activate", function (e) {
   );
 });
 
-// 取得時: キャッシュ優先（オフラインでも動く）。無ければネットから取って保存
+// 同じレスポンスをキャッシュに保存する（同一オリジンの正常応答のみ）
+function saveToCache(request, res) {
+  if (res && res.status === 200 && res.type === "basic") {
+    const copy = res.clone();
+    caches.open(CACHE_NAME).then(function (cache) { cache.put(request, copy); });
+  }
+  return res;
+}
+
 self.addEventListener("fetch", function (e) {
   if (e.request.method !== "GET") return;
 
+  // ページ本体（HTML）と中身のコード（js/css）は「ネット優先」。
+  // これをキャッシュ優先にすると、ゲームを更新しても古い版が表示され続けてしまう。
+  // 電波が無いときだけキャッシュに切り替わるので、オフライン再生は保たれる。
+  const url = new URL(e.request.url);
+  const isCode = /\.(js|css)$/.test(url.pathname);
+  const isPage = e.request.mode === "navigate";
+
+  if (isPage || isCode) {
+    e.respondWith(
+      fetch(e.request)
+        .then(function (res) { return saveToCache(e.request, res); })
+        .catch(function () {
+          return caches.match(e.request, { ignoreSearch: true }).then(function (hit) {
+            return hit || caches.match("./index.html");
+          });
+        })
+    );
+    return;
+  }
+
+  // 画像などの重い素材は「キャッシュ優先」。一度取れば以後は通信しない。
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then(function (hit) {
       if (hit) return hit;
       return fetch(e.request).then(function (res) {
-        // 同一オリジンの正常なレスポンスだけキャッシュに追加
-        if (res && res.status === 200 && res.type === "basic") {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then(function (cache) {
-            cache.put(e.request, copy);
-          });
-        }
-        return res;
-      }).catch(function () {
-        // オフラインで未キャッシュのページを開こうとした場合はトップに戻す
-        if (e.request.mode === "navigate") return caches.match("./index.html");
+        return saveToCache(e.request, res);
       });
     })
   );

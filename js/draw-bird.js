@@ -2,7 +2,7 @@
 (function () {
   // 物理円に対する絵の描画倍率。画像はトリム済みでフレームいっぱいだが、
   // 絵の輪郭は完全な円ではないため、少し大きめに描いて隙間を目立たなくする
-  const IMG_SCALE = 1.02;
+  const IMG_SCALE = 1.07;
 
   const cache = {}; // key: "puzzleKey|slug" -> { loaded, img, color }
 

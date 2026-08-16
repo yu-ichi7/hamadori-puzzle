@@ -45,6 +45,8 @@
       const newTier = job.tier + 1;
       const newBird = TORI.physics.createBird(mx, my, newTier);
       Body.setVelocity(newBird, { x: 0, y: -2 }); // 「ポンッ」と軽く上に生まれる
+      // 生まれた直後もわずかに回転させて、山の上でコロンと落ち着くようにする
+      Body.setAngularVelocity(newBird, (Math.random() - 0.5) * TORI.PHYS.dropSpin);
       Composite.add(engine.world, newBird);
 
       if (onMerge) onMerge(newTier, mx, my);

@@ -66,6 +66,8 @@
     const tier = currentTier;
     const cx = clampAim(x, tier);
     const bird = TORI.physics.createBird(cx, B.DROP_Y, tier);
+    // 落ちてきた鳥がコロンと転がり出すよう、わずかにランダムな回転を与える
+    Body.setAngularVelocity(bird, (Math.random() - 0.5) * P.dropSpin);
     Composite.add(engine.world, bird);
     TORI.zukan.unlock(TORI.state.puzzleKey, tier); // 落下でも初出会いは解放
     TORI.audio.drop();
@@ -172,6 +174,7 @@
 
   function gameOver() {
     isOver = true;
+    TORI.bgm.stop();
     TORI.audio.gameover();
     const isNewBest = TORI.zukan.saveHighscore(score);
     TORI.items.onPlayFinished(); // 5プレーごとのボーナス在庫カウント
@@ -201,6 +204,7 @@
     updateUI();
     updatePuzzleLabel();
     updateShakeUI();
+    TORI.bgm.play(TORI.state.puzzleKey); // パズルのテーマに合ったBGMを流す
     document.getElementById("overModal").classList.remove("open");
   }
 
@@ -322,6 +326,7 @@
   document.getElementById("muteBtn").addEventListener("click", function () {
     const m = TORI.audio.toggleMute();
     this.textContent = m ? "🔇" : "🔊";
+    TORI.bgm.syncMute(m); // BGMも一緒に止める／再開する
   });
   if (shakeBtn) shakeBtn.addEventListener("click", doShake);
 

@@ -27,13 +27,21 @@
 
   // 鳥ボディ生成（label='bird'、plugin に tier / id / merging を持たせる）
   function createBird(x, y, tier, extra) {
+    const P = TORI.PHYS;
     const def = TORI.BIRDS[tier - 1];
+    // 本家スイカゲームと同じく、大きい段ほど密度を下げる。
+    // 大きい鳥がずっしり重すぎると下の鳥を押しつぶして山が崩れやすいため。
+    const maxTier = TORI.TIER.radius.length;
+    const t = maxTier > 1 ? (tier - 1) / (maxTier - 1) : 0;
+    const density = P.density * (1 - P.densityFalloff * t);
+
     const body = Bodies.circle(x, y, def.radius, {
       label: "bird",
-      restitution: TORI.PHYS.restitution,
-      friction: TORI.PHYS.friction,
-      frictionStatic: TORI.PHYS.frictionStatic,
-      density: TORI.PHYS.density,
+      restitution: P.restitution,
+      friction: P.friction,
+      frictionStatic: P.frictionStatic,
+      frictionAir: P.frictionAir,
+      density: density,
     });
     body.plugin = body.plugin || {};
     body.plugin.tier = tier;
